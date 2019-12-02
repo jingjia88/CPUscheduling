@@ -47,14 +47,13 @@ Scheduler::Aging()
     ListIterator<Thread *> *iter3 = new ListIterator<Thread *>(L3);
 
     while(!iter1->IsDone()){ 
-        Thread* t = iter1->Item();
-        L1->Remove(t);
-        bool aging = this->CheckAge(t); //actually it always return false because L1 is the highest level
-        if(!aging) L1->Insert(t);
+        Thread* t = iter1->Item(); 
+        this->CheckAge(t); 
         iter1->Next();
     }
 
-    while(!iter2->IsDone()){                                                                                                    Thread* t = iter2->Item();
+    while(!iter2->IsDone()){
+        Thread* t = iter2->Item();
         L2->Remove(t);                                                                                       
 	bool aging = this->CheckAge(t);                                          
 	if(!aging) L2->Insert(t);                                                                            
@@ -70,7 +69,7 @@ Scheduler::Aging()
 
 bool
 Scheduler::CheckAge(Thread *thread)
-{ DEBUG(z,"checkage\n\n");
+{ 
     //check thread in ready queue and wait for more than 1500 ticks
     int now = kernel->stats->totalTicks;
     int wait = now - thread->getReady();
@@ -94,7 +93,7 @@ Scheduler::CheckAge(Thread *thread)
             DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L1");
 	    DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L2");	    
 	
-	//thread->setReady(now);
+	thread->setReady(now);
 	
 	//in L1 need to check preempt
 	if(kernel->currentThread->getPriority() >= 100 && (kernel->currentThread->getID()!=thread->getID())){ 
@@ -108,7 +107,7 @@ Scheduler::CheckAge(Thread *thread)
             DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L2");
             DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L1");
         
-       // thread->setReady(now);
+        thread->setReady(now);
     }
     return FALSE;
 }

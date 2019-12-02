@@ -277,7 +277,8 @@ Thread::Sleep (bool finishing)
     {                     
 	double running = kernel->stats->userTicks - this->getStart() + this->bigT;   
         double predict = 0.5 * running + 0.5 * this->getBurstTime(); 
-        this->setBurstTime(predict);      this->bigT = 0;       
+	DEBUG(z,"Tick "<<kernel->stats->totalTicks<<": Thread "<<this->getID()<<" update approximate burst time, from: "<< this->getBurstTime() <<", add "<<running<<", to "<<predict);
+        this->setBurstTime(predict);      this->bigT = 0;      
     } 
 	//cout << "debug Thread::Sleep " << name << "wait for Idle\n";
     while ((nextThread = kernel->scheduler->FindNextToRun()) == NULL) {
