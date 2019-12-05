@@ -100,7 +100,9 @@ class Thread {
     void setReady(int p){ ready = p; }
     double getBurstTime(){ return burstTime; }
     void setBurstTime(double p){ burstTime = p; }
+    
     double bigT;   
+    int waiting;
     // basic thread operations
 
     void Fork(VoidFunctionPtr func, void *arg); 

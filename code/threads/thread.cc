@@ -48,6 +48,7 @@ Thread::Thread(char* threadName, int threadID)
     space = NULL;
     //mp3
     this->setBurstTime(0);
+    this->setReady(0);
     this->bigT = 0;   
 }
 Thread::Thread(char* threadName, int threadID, int priority)
@@ -66,7 +67,9 @@ Thread::Thread(char* threadName, int threadID, int priority)
     //mp3
     this->setPriority(priority);
     this->setBurstTime(0);
+    this->setReady(0);
     this->bigT = 0;
+    this->waiting = 0;
 }
 //----------------------------------------------------------------------
 // Thread::~Thread

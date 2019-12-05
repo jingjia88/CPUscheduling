@@ -55,28 +55,33 @@ Scheduler::Aging()
     while(!iter2->IsDone()){
         Thread* t = iter2->Item();
         L2->Remove(t);                                                                                       
-	bool aging = this->CheckAge(t);                                          
-	if(!aging) L2->Insert(t);                                                                            
-	iter2->Next();                                                                                                      }
+	bool aging = this->CheckAge(t);   
+	if(!aging) L2->Insert(t);                                                                    
+	iter2->Next(); 
+    }
     //because  list3 does not use sortedList so do not remove the thread
     while(!iter3->IsDone()){                                                          
         Thread* t = iter3->Item();       
         this->CheckAge(t);
         iter3->Next(); 
     }	
-
+  //  CheckAge(kernel->currentThread);
 }
 
 bool
 Scheduler::CheckAge(Thread *thread)
 { 
-    //check thread in ready queue and wait for more than 1500 ticks
+    //check thread wait for more than 1500 ticks
     int now = kernel->stats->totalTicks;
-    int wait = now - thread->getReady();
-    if( thread->getStatus() != READY ) return FALSE;
-    DEBUG(z,wait<<"\n\n");
-    if( wait < 1500 ) return FALSE;
-    
+    int wait = now - thread->getReady() + thread->waiting;
+DEBUG(z,"kkkkkkk "<<now<<": Thread "<<thread->getID()<<"，   "<<wait);
+    if( wait < 1500 ){
+	 return FALSE;
+    }else{
+        DEBUG(z,"ppppppppppppppp "<<now<<": Thread "<<thread->getID()<<"，   "<<wait);
+	thread->waiting = thread->waiting - 1500;
+    }
+
     //update priority
     int oldPriority = thread->getPriority();
     int newPriority = oldPriority + 10;
@@ -84,6 +89,8 @@ Scheduler::CheckAge(Thread *thread)
     thread->setPriority(newPriority);
     if( newPriority != oldPriority){
 	DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" changes its priority from "<<oldPriority<<" to "<<newPriority);
+//	int newWait = thread->getReady() + 1500;
+  //      thread->setReady(newWait);
     }
     
     //update queue list #L2->L1
@@ -93,21 +100,17 @@ Scheduler::CheckAge(Thread *thread)
             DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L1");
 	    DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L2");	    
 	
-	thread->setReady(now);
-	
 	//in L1 need to check preempt
 	if(kernel->currentThread->getPriority() >= 100 && (kernel->currentThread->getID()!=thread->getID())){ 
-            double running = kernel->stats->userTicks - kernel->currentThread->getStart() + kernel->currentThread->bigT;            double predict = 0.5 * running + 0.5 * kernel->currentThread->getBurstTime();
-            if(predict < thread->getBurstTime()) kernel->currentThread->Yield();
+            if(kernel->currentThread->getBurstTime() < thread->getBurstTime()) kernel->currentThread->Yield();
         }
         return TRUE;
     }else if( newPriority >= 50 && oldPriority < 50 ){ /* update queue list #L3->L2  */
             L3->Remove(thread);
             L2->Insert(thread);
             DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L2");
-            DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L1");
+            DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L3");
         
-        thread->setReady(now);
     }
     return FALSE;
 }
@@ -173,9 +176,7 @@ Scheduler::ReadyToRun (Thread *thread)
     if(thread->getPriority() >= 100 && kernel->currentThread->getPriority() >= 100)
     { 
 	if(kernel->currentThread->getID()!=thread->getID()){  
-	    double running = kernel->stats->userTicks - kernel->currentThread->getStart() + kernel->currentThread->bigT;
-	    double predict = 0.5 * running + 0.5 * kernel->currentThread->getBurstTime();
-            if(predict < thread->getBurstTime()) kernel->currentThread->Yield();
+            if(kernel->currentThread->getBurstTime() < thread->getBurstTime()) kernel->currentThread->Yield();
 	}
     }                                                                       
 }
@@ -198,14 +199,15 @@ Scheduler::FindNextToRun ()
     if (L1->IsEmpty() && L2->IsEmpty() && L3->IsEmpty()) {
 		return NULL;
     } else if(!L1->IsEmpty()) {
-       // if(kernel->currentThread->getBurstTime() > L2->Front()->getBurstTime() ) return kernel->currentThread;
+        L1->Front()->waiting = L1->Front()->waiting + kernel->stats->totalTicks - L1->Front()->getReady();
         DEBUG(z,"Tick " << now << ": Thread " << L1->Front()->getID() << " is removed from queue L1");
     	return L1->RemoveFront();
     }else if(L1->IsEmpty() && !L2->IsEmpty()) {
-       // if(kernel->currentThread->getPriority() > L2->Front()->getPriority() ) return kernel->currentThread;
+        L2->Front()->waiting = L2->Front()->waiting + kernel->stats->totalTicks - L2->Front()->getReady(); 
 	DEBUG(z,"Tick " << now << ": Thread " << L2->Front()->getID() << " is removed from queue L2");   
         return L2->RemoveFront();
     }else if(L1->IsEmpty() && L2->IsEmpty() && !L3->IsEmpty()) {
+        L3->Front()->waiting = L3->Front()->waiting + kernel->stats->totalTicks - L3->Front()->getReady(); 
 	DEBUG(z,"Tick " << now << ": Thread " << L3->Front()->getID() << " is removed from queue L3");   
 	return L3->RemoveFront();
    }
