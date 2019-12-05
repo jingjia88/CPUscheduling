@@ -74,12 +74,11 @@ Scheduler::CheckAge(Thread *thread)
     //check thread wait for more than 1500 ticks
     int now = kernel->stats->totalTicks;
     int wait = now - thread->getReady() + thread->waiting;
-DEBUG(z,"kkkkkkk "<<now<<": Thread "<<thread->getID()<<"，   "<<wait);
+
     if( wait < 1500 ){
 	 return FALSE;
     }else{
-        DEBUG(z,"ppppppppppppppp "<<now<<": Thread "<<thread->getID()<<"，   "<<wait);
-	thread->waiting = thread->waiting - 1500;
+        thread->waiting = thread->waiting - 1500;
     }
 
     //update priority
@@ -89,16 +88,13 @@ DEBUG(z,"kkkkkkk "<<now<<": Thread "<<thread->getID()<<"，   "<<wait);
     thread->setPriority(newPriority);
     if( newPriority != oldPriority){
 	DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" changes its priority from "<<oldPriority<<" to "<<newPriority);
-//	int newWait = thread->getReady() + 1500;
-  //      thread->setReady(newWait);
     }
     
     //update queue list #L2->L1
     if( newPriority >= 100 && oldPriority < 100 ){
-	   
-	    L1->Insert(thread);
-            DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L1");
-	    DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L2");	    
+	DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L2");    
+	L1->Insert(thread);
+        DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L1");	    
 	
 	//in L1 need to check preempt
 	if(kernel->currentThread->getPriority() >= 100 && (kernel->currentThread->getID()!=thread->getID())){ 
@@ -106,11 +102,10 @@ DEBUG(z,"kkkkkkk "<<now<<": Thread "<<thread->getID()<<"，   "<<wait);
         }
         return TRUE;
     }else if( newPriority >= 50 && oldPriority < 50 ){ /* update queue list #L3->L2  */
-            L3->Remove(thread);
-            L2->Insert(thread);
-            DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L2");
-            DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L3");
-        
+        L3->Remove(thread);
+	DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L3");
+        L2->Insert(thread);
+        DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L2");        
     }
     return FALSE;
 }
