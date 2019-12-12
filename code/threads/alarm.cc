@@ -48,9 +48,11 @@ Alarm::CallBack()
 {
     Interrupt *interrupt = kernel->interrupt;
     MachineStatus status = interrupt->getStatus();                                                                                                                                                                                 
-    if (status != IdleMode) {
-	interrupt->YieldOnReturn();
-    }
     //mp3
     kernel->scheduler->Aging();
+    if(kernel->currentThread->getPreempt()) interrupt->YieldOnReturn();
+    if (status != IdleMode && kernel->currentThread->getPriority()<=49) {
+	interrupt->YieldOnReturn();
+    }
+    
 }

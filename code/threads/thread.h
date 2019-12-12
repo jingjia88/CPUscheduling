@@ -84,6 +84,7 @@ class Thread {
     double burstTime;
     int start;
     int ready;
+    bool preempt;
   public:
     Thread(char* debugName, int threadID);		// initialize a Thread 
     ~Thread(); 				// deallocate a Thread
@@ -100,7 +101,9 @@ class Thread {
     void setReady(int p){ ready = p; }
     double getBurstTime(){ return burstTime; }
     void setBurstTime(double p){ burstTime = p; }
-    
+    bool getPreempt(){ return preempt;}
+    void setPreempt(bool p){ preempt = p;}   
+
     double bigT;   
     int waiting;
     // basic thread operations

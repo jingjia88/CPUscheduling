@@ -93,13 +93,10 @@ Scheduler::CheckAge(Thread *thread)
     //update queue list #L2->L1
     if( newPriority >= 100 && oldPriority < 100 ){
 	DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L2");    
-	L1->Insert(thread);
-        DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L1");	    
-	
-	//in L1 need to check preempt
-	if(kernel->currentThread->getPriority() >= 100 && (kernel->currentThread->getID()!=thread->getID())){ 
-            if(kernel->currentThread->getBurstTime() < thread->getBurstTime()) kernel->currentThread->Yield();
-        }
+	int newwait = now - thread->getReady();
+	thread->waiting += newwait;
+	kernel->scheduler->ReadyToRun(thread);       
+        
         return TRUE;
     }else if( newPriority >= 50 && oldPriority < 50 ){ /* update queue list #L3->L2  */
         L3->Remove(thread);
@@ -155,25 +152,32 @@ Scheduler::ReadyToRun (Thread *thread)
     
     //mp3
     int now = kernel->stats->totalTicks;
-    if(thread->getPriority()<=49){
+    thread->setReady(now);
+
+    if(thread->getPriority()<=49 && thread->getPriority()>=0){
         DEBUG(z,"Tick " << now << ": Thread " << thread->getID() << " is inserted into queue L3");
 	L3->Append(thread);
+    
     }else if(thread->getPriority()<=99 && thread->getPriority()>=50){
 	DEBUG(z,"Tick " << now << ": Thread " << thread->getID() << " is inserted into queue L2");
 	L2->Insert(thread);
-    }else{
+    
+    }else if(thread->getPriority()>=100){
 	DEBUG(z,"Tick " << now << ": Thread " << thread->getID() << " is inserted into queue L1");
 	L1->Insert(thread);
-    }
-
-    thread->setReady(now);
-    //preempt
-    if(thread->getPriority() >= 100 && kernel->currentThread->getPriority() >= 100)
-    { 
-	if(kernel->currentThread->getID()!=thread->getID()){  
-            if(kernel->currentThread->getBurstTime() < thread->getBurstTime()) kernel->currentThread->Yield();
+	
+	if(kernel->currentThread->getID()!=thread->getID() && !L1->IsInList(kernel->currentThread)){
+	    if( kernel->currentThread->getPriority() >= 100){
+		if(kernel->currentThread->getBurstTime() > thread->getBurstTime()){
+			kernel->currentThread->setPreempt(TRUE);  DEBUG(z,"Tick " << now << ": preempted L1 Thread " <<kernel->currentThread->getID());
+		}
+            }else if (kernel->currentThread->getID()!=0 && kernel->currentThread->getPriority()<100){
+		kernel->currentThread->setPreempt(TRUE); 
+		DEBUG(z,"Tick " << now << ": preempted L2,3 Thread " <<kernel->currentThread->getID());
+            }
 	}
-    }                                                                       
+    }
+                                                                 
 }
 
 //----------------------------------------------------------------------
@@ -280,6 +284,7 @@ Scheduler::Run (Thread *nextThread, bool finishing)
         oldThread->RestoreUserState();     // to restore, do it.
 	oldThread->space->RestoreState();
     }
+
 }
 
 //----------------------------------------------------------------------

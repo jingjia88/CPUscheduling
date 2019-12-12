@@ -46,10 +46,7 @@ Thread::Thread(char* threadName, int threadID)
 					// of machine registers
     }
     space = NULL;
-    //mp3
-    this->setBurstTime(0);
-    this->setReady(0);
-    this->bigT = 0;   
+     
 }
 Thread::Thread(char* threadName, int threadID, int priority)
 {
@@ -70,6 +67,7 @@ Thread::Thread(char* threadName, int threadID, int priority)
     this->setReady(0);
     this->bigT = 0;
     this->waiting = 0;
+    this->setPreempt(FALSE);
 }
 //----------------------------------------------------------------------
 // Thread::~Thread
@@ -232,12 +230,15 @@ Thread::Yield ()
     //mp3
     double running = kernel->stats->userTicks - this->getStart();
     this->bigT = running;
-
+    //current thread is now be preempted
+    kernel->currentThread->setPreempt(FALSE);
+    
+    //put current thread back to ready queue before findNextToRun
     kernel->scheduler->ReadyToRun(this); 
     nextThread = kernel->scheduler->FindNextToRun();
 
     if (nextThread != NULL) {
-	//kernel->scheduler->ReadyToRun(this);
+//	kernel->scheduler->ReadyToRun(this);
 	kernel->scheduler->Run(nextThread, FALSE);
     }
     (void) kernel->interrupt->SetLevel(oldLevel);
@@ -275,18 +276,21 @@ Thread::Sleep (bool finishing)
     DEBUG(dbgTraCode, "In Thread::Sleep, Sleeping thread: " << name << ", " << kernel->stats->totalTicks);
 
     status = BLOCKED;
-    //mp3
-    if(this->getPriority() >= 100)
-    {                     
-	double running = kernel->stats->userTicks - this->getStart() + this->bigT;   
-        double predict = 0.5 * running + 0.5 * this->getBurstTime(); 
-	DEBUG(z,"Tick "<<kernel->stats->totalTicks<<": Thread "<<this->getID()<<" update approximate burst time, from: "<< this->getBurstTime() <<", add "<<running<<", to "<<predict);
-        this->setBurstTime(predict);      this->bigT = 0;      
-    } 
-	//cout << "debug Thread::Sleep " << name << "wait for Idle\n";
+   
+    //cout << "debug Thread::Sleep " << name << "wait for Idle\n";
     while ((nextThread = kernel->scheduler->FindNextToRun()) == NULL) {
 		kernel->interrupt->Idle();	// no one to run, wait for an interrupt
 	}    
+    
+    //mp3  update burst time
+    if(this->getPriority() >= 100)
+    {
+        double running = kernel->stats->userTicks - this->getStart() + this->bigT;
+        double predict = 0.5 * running + 0.5 * this->getBurstTime();
+        DEBUG(z,"Tick "<<kernel->stats->totalTicks<<": Thread "<<this->getID()<<" update approximate burst time, from: "<< this->getBurstTime() <<", add "<<running<<", to "<<predict);
+        this->setBurstTime(predict);      this->bigT = 0;
+    }
+    
     // returns when it's time for us to run
     kernel->scheduler->Run(nextThread, finishing); 
 }
