@@ -116,7 +116,7 @@ SynchConsoleOutput::PutInt(int value)
     lock->Acquire();
     do{
 	DEBUG(dbgTraCode, "In SynchConsoleOutput::PutChar, into consoleOutput->PutChar, " << kernel->stats->totalTicks);
-        consoleOutput->PutChar(str[idx]);
+        consoleOutput->PutChar(str[idx]); 
 	DEBUG(dbgTraCode, "In SynchConsoleOutput::PutChar, return from consoleOutput->PutChar, " << kernel->stats->totalTicks);
 	idx++;
 		

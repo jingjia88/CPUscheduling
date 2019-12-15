@@ -87,12 +87,12 @@ Scheduler::CheckAge(Thread *thread)
     if( newPriority > 149) newPriority = 149;
     thread->setPriority(newPriority);
     if( newPriority != oldPriority){
-	DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" changes its priority from "<<oldPriority<<" to "<<newPriority);
+	DEBUG(z,"[C] Tick ["<<now<<"]: Thread ["<<thread->getID()<<"] changes its priority from ["<<oldPriority<<"] to ["<<newPriority<<"]");
     }
     
     //update queue list #L2->L1
     if( newPriority >= 100 && oldPriority < 100 ){
-	DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L2");    
+	DEBUG(z,"[B] Tick ["<<now<<"]: Thread ["<<thread->getID()<<"] is removed from queue L2");    
 	int newwait = now - thread->getReady();
 	thread->waiting += newwait;
 	kernel->scheduler->ReadyToRun(thread);       
@@ -100,9 +100,9 @@ Scheduler::CheckAge(Thread *thread)
         return TRUE;
     }else if( newPriority >= 50 && oldPriority < 50 ){ /* update queue list #L3->L2  */
         L3->Remove(thread);
-	DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is removed from queue L3");
+	DEBUG(z,"[B] Tick ["<<now<<"]: Thread ["<<thread->getID()<<"] is removed from queue L3");
         L2->Insert(thread);
-        DEBUG(z,"Tick "<<now<<": Thread "<<thread->getID()<<" is inserted into queue L2");        
+        DEBUG(z,"[A] Tick ["<<now<<"]: Thread ["<<thread->getID()<<"] is inserted into queue L2");        
     }
     return FALSE;
 }
@@ -155,25 +155,24 @@ Scheduler::ReadyToRun (Thread *thread)
     thread->setReady(now);
 
     if(thread->getPriority()<=49 && thread->getPriority()>=0){
-        DEBUG(z,"Tick " << now << ": Thread " << thread->getID() << " is inserted into queue L3");
+        DEBUG(z,"[A] Tick [" << now << "]: Thread [" << thread->getID() << "] is inserted into queue L3");
 	L3->Append(thread);
     
     }else if(thread->getPriority()<=99 && thread->getPriority()>=50){
-	DEBUG(z,"Tick " << now << ": Thread " << thread->getID() << " is inserted into queue L2");
+	DEBUG(z,"[A] Tick [" << now << "]: Thread [" << thread->getID() << "] is inserted into queue L2");
 	L2->Insert(thread);
     
     }else if(thread->getPriority()>=100){
-	DEBUG(z,"Tick " << now << ": Thread " << thread->getID() << " is inserted into queue L1");
+	DEBUG(z,"[A] Tick [" << now << "]: Thread [" << thread->getID() << "] is inserted into queue L1");
 	L1->Insert(thread);
 	
 	if(kernel->currentThread->getID()!=thread->getID() && !L1->IsInList(kernel->currentThread)){
 	    if( kernel->currentThread->getPriority() >= 100){
 		if(kernel->currentThread->getBurstTime() > thread->getBurstTime()){
-			kernel->currentThread->setPreempt(TRUE);  DEBUG(z,"Tick " << now << ": preempted L1 Thread " <<kernel->currentThread->getID());
+			kernel->currentThread->setPreempt(TRUE);  
 		}
             }else if (kernel->currentThread->getID()!=0 && kernel->currentThread->getPriority()<100){
 		kernel->currentThread->setPreempt(TRUE); 
-		DEBUG(z,"Tick " << now << ": preempted L2,3 Thread " <<kernel->currentThread->getID());
             }
 	}
     }
@@ -199,15 +198,15 @@ Scheduler::FindNextToRun ()
 		return NULL;
     } else if(!L1->IsEmpty()) {
         L1->Front()->waiting = L1->Front()->waiting + kernel->stats->totalTicks - L1->Front()->getReady();
-        DEBUG(z,"Tick " << now << ": Thread " << L1->Front()->getID() << " is removed from queue L1");
+        DEBUG(z,"[B] Tick [" << now << "]: Thread [" << L1->Front()->getID() << "] is removed from queue L1");
     	return L1->RemoveFront();
     }else if(L1->IsEmpty() && !L2->IsEmpty()) {
         L2->Front()->waiting = L2->Front()->waiting + kernel->stats->totalTicks - L2->Front()->getReady(); 
-	DEBUG(z,"Tick " << now << ": Thread " << L2->Front()->getID() << " is removed from queue L2");   
+	DEBUG(z,"[B] Tick [" << now << "]: Thread [" << L2->Front()->getID() << "] is removed from queue L2");   
         return L2->RemoveFront();
     }else if(L1->IsEmpty() && L2->IsEmpty() && !L3->IsEmpty()) {
         L3->Front()->waiting = L3->Front()->waiting + kernel->stats->totalTicks - L3->Front()->getReady(); 
-	DEBUG(z,"Tick " << now << ": Thread " << L3->Front()->getID() << " is removed from queue L3");   
+	DEBUG(z,"[B] Tick [" << now << "]: Thread [" << L3->Front()->getID() << "] is removed from queue L3");   
 	return L3->RemoveFront();
    }
 }
@@ -238,10 +237,9 @@ Scheduler::Run (Thread *nextThread, bool finishing)
     
     //mp3
     int now = kernel->stats->totalTicks;
-    int program = kernel->stats->userTicks;
-    int oldRun =  program - oldThread->getStart();
-    nextThread->setStart(program);
-    DEBUG(z,"Tick " << now << ": Thread " << nextThread->getID() <<" is now selected for execution, thread " << oldThread->getID() <<" is replaced, and it has executed " << oldRun << " ticks");
+    int oldRun =  now - oldThread->getStart();
+    nextThread->setStart(now);
+    DEBUG(z,"[E] Tick [" << now << "]: Thread [" << nextThread->getID() <<"] is now selected for execution, thread [" << oldThread->getID() <<"] is replaced, and it has executed [" << oldRun << "] ticks");
     
     
     if (finishing) {	// mark that we need to delete current thread

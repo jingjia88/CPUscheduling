@@ -228,7 +228,7 @@ Thread::Yield ()
     
     DEBUG(dbgThread, "Yielding thread: " << name);
     //mp3
-    double running = kernel->stats->userTicks - this->getStart();
+    double running = kernel->stats->totalTicks - this->getStart();
     this->bigT = running;
     //current thread is now be preempted
     kernel->currentThread->setPreempt(FALSE);
@@ -275,21 +275,21 @@ Thread::Sleep (bool finishing)
     DEBUG(dbgThread, "Sleeping thread: " << name);
     DEBUG(dbgTraCode, "In Thread::Sleep, Sleeping thread: " << name << ", " << kernel->stats->totalTicks);
 
+
     status = BLOCKED;
+
+    if(this->getPriority() >= 100)
+    {
+        double running = kernel->stats->totalTicks - this->getStart() + this->bigT;
+        double predict = 0.5 * running + 0.5 * this->getBurstTime();
+        DEBUG(z,"[D] Tick ["<<kernel->stats->totalTicks<<"]: Thread ["<<this->getID()<<"] update approximate burst time, from: ["<< this->getBurstTime() <<"], add ["<<running<<"], to ["<<predict<<"]");
+        this->setBurstTime(predict);      this->bigT = 0;
+    }
    
     //cout << "debug Thread::Sleep " << name << "wait for Idle\n";
     while ((nextThread = kernel->scheduler->FindNextToRun()) == NULL) {
 		kernel->interrupt->Idle();	// no one to run, wait for an interrupt
 	}    
-    
-    //mp3  update burst time
-    if(this->getPriority() >= 100)
-    {
-        double running = kernel->stats->userTicks - this->getStart() + this->bigT;
-        double predict = 0.5 * running + 0.5 * this->getBurstTime();
-        DEBUG(z,"Tick "<<kernel->stats->totalTicks<<": Thread "<<this->getID()<<" update approximate burst time, from: "<< this->getBurstTime() <<", add "<<running<<", to "<<predict);
-        this->setBurstTime(predict);      this->bigT = 0;
-    }
     
     // returns when it's time for us to run
     kernel->scheduler->Run(nextThread, finishing); 
